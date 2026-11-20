@@ -46,59 +46,85 @@ fn each_client_reads_the_skill_from_its_own_folder() {
 }
 
 #[test]
-fn the_skill_is_valid_for_every_client() {
-    let front = skill::TEXT
-        .strip_prefix("---\n")
-        .and_then(|rest| rest.split("\n---\n").next())
-        .unwrap();
-    let value: Value = serde_saphyr::from_str(front).unwrap();
-    // Cursor and the Agent Skills spec: the name is the folder's.
-    assert_eq!(value["name"], SKILL_FOLDER);
-    let description = value["description"].as_str().unwrap();
-    assert!(!description.is_empty() && description.chars().count() <= 1024);
-    assert_eq!(value["metadata"]["managed-by"], "agent-hud");
-    // DeepSeek Harness: kebab-case names only.
-    assert!(SKILL_FOLDER
-        .split('-')
-        .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_lowercase())));
+fn every_managed_skill_is_valid_for_every_client() {
+    for managed in skill::MANAGED {
+        let front = managed
+            .text
+            .strip_prefix("---\n")
+            .and_then(|rest| rest.split("\n---\n").next())
+            .unwrap();
+        let value: Value = serde_saphyr::from_str(front).unwrap();
+        // Cursor and the Agent Skills spec: the name is the folder's.
+        assert_eq!(value["name"], managed.folder);
+        let description = value["description"].as_str().unwrap();
+        assert!(!description.is_empty() && description.chars().count() <= 1024);
+        assert_eq!(value["metadata"]["managed-by"], "agent-hud");
+        // DeepSeek Harness: kebab-case names only.
+        assert!(managed
+            .folder
+            .split('-')
+            .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_lowercase())));
+    }
 }
 
 #[test]
-fn the_skill_is_added_refreshed_and_removed_but_never_someone_elses() {
+fn the_skills_are_added_refreshed_and_removed_but_never_someone_elses() {
     let home = tempfile::tempdir().unwrap();
     let places = places(home.path());
     let client = Client::Cursor;
-    let file = client.skills(&places).join(SKILL_FOLDER).join("SKILL.md");
+    let files: Vec<_> = skill::MANAGED
+        .iter()
+        .map(|managed| client.skills(&places).join(managed.folder).join("SKILL.md"))
+        .collect();
+    assert!(
+        files.len() >= 2,
+        "this test needs more than one managed skill"
+    );
+
+    // Added together, each with its own text.
     assert_eq!(client.skill_state(&places), SkillState::Missing);
     assert!(client.add_skill(&places).unwrap());
-    assert_eq!(fs::read_to_string(&file).unwrap(), skill::TEXT);
+    for (managed, file) in skill::MANAGED.iter().zip(&files) {
+        assert_eq!(fs::read_to_string(file).unwrap(), managed.text);
+    }
     assert_eq!(client.skill_state(&places), SkillState::Current);
     assert!(!client.add_skill(&places).unwrap());
 
-    // An older copy of ours is brought up to date.
+    // An older copy of one is brought up to date; the other stays current.
     fs::write(
-        &file,
+        &files[0],
         "---\nname: customize-agent-hud\nmetadata:\n  managed-by: agent-hud\n---\nold\n",
     )
     .unwrap();
     assert_eq!(client.skill_state(&places), SkillState::Older);
     assert!(client.add_skill(&places).unwrap());
+    assert_eq!(
+        fs::read_to_string(&files[0]).unwrap(),
+        skill::MANAGED[0].text
+    );
     assert_eq!(client.skill_state(&places), SkillState::Current);
 
+    // Removed together; only our folders go.
     client.remove_skill(&places).unwrap();
     assert_eq!(client.skill_state(&places), SkillState::Missing);
-    assert!(!file.parent().unwrap().exists());
+    for file in &files {
+        assert!(!file.parent().unwrap().exists());
+    }
 
-    // Someone else's skill of the same name stays as it is.
-    fs::create_dir_all(file.parent().unwrap()).unwrap();
-    fs::write(&file, "---\nname: customize-agent-hud\n---\nmine\n").unwrap();
-    assert_eq!(client.skill_state(&places), SkillState::Foreign);
+    // Someone else's copy of one skill stays as it is and refuses the write,
+    // while the other skill is still added, then taken back on removal.
+    let foreign = "---\nname: customize-agent-hud\n---\nmine\n";
+    fs::create_dir_all(files[0].parent().unwrap()).unwrap();
+    fs::write(&files[0], foreign).unwrap();
     assert!(client.add_skill(&places).is_err());
-    client.remove_skill(&places).unwrap();
+    assert_eq!(fs::read_to_string(&files[0]).unwrap(), foreign);
     assert_eq!(
-        fs::read_to_string(&file).unwrap(),
-        "---\nname: customize-agent-hud\n---\nmine\n"
+        fs::read_to_string(&files[1]).unwrap(),
+        skill::MANAGED[1].text
     );
+    client.remove_skill(&places).unwrap();
+    assert_eq!(fs::read_to_string(&files[0]).unwrap(), foreign);
+    assert!(!files[1].parent().unwrap().exists());
 }
 
 #[test]
@@ -114,10 +140,12 @@ fn a_folder_our_removal_left_behind_is_filled_again() {
     assert_eq!(client.skill_state(&places), SkillState::Missing);
     assert!(client.add_skill(&places).unwrap());
     assert_eq!(client.skill_state(&places), SkillState::Current);
-    // A file where the folder would go is someone else's.
+    // A file where either skill's folder would go is someone else's.
     let other = Client::Cursor;
     fs::create_dir_all(other.skills(&places)).unwrap();
-    fs::write(other.skills(&places).join(SKILL_FOLDER), "mine").unwrap();
+    for managed in skill::MANAGED {
+        fs::write(other.skills(&places).join(managed.folder), "mine").unwrap();
+    }
     assert_eq!(other.skill_state(&places), SkillState::Foreign);
     assert!(other.add_skill(&places).is_err());
 }

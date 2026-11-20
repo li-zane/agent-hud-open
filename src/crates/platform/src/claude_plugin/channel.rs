@@ -1,6 +1,6 @@
 use super::{
     file_age, identity, millis, valid_name, write_json, write_private, PromptState, Refusal,
-    CHECK_IN_LIFETIME, PROMPT_LIFETIME, SCRIPT,
+    CHECK_IN_LIFETIME, PROMPT_LIFETIME,
 };
 use serde_json::{json, Value};
 use std::{
@@ -85,18 +85,7 @@ impl ClaudeChannel {
         crate::os::channel_directory(&self.directory.join("sessions"))?;
         crate::os::channel_directory(&self.directory.join("prompts"))?;
         let channel = serde_json::to_string(&self.directory.to_string_lossy()).unwrap();
-        let files = [
-            (
-                ".claude-plugin/marketplace.json",
-                json!({"name":"agent-hud","owner":{"name":"Agent HUD"},"plugins":[{"name":"agent-hud","source":"./"}]}).to_string(),
-            ),
-            (
-                ".claude-plugin/plugin.json",
-                json!({"name":"agent-hud","version":"1.1.0","description":"Delivers user-authorized Agent HUD input to this existing session.","author":{"name":"Agent HUD"}}).to_string(),
-            ),
-            ("hooks/hooks.json", json!({"modules":["./register.ts"]}).to_string()),
-            ("hooks/register.ts", SCRIPT.replace("__AGENT_HUD_CHANNEL_JSON__", &channel)),
-        ];
+        let files = super::files::plugin_files(&channel);
         crate::os::private_directory(folder)?;
         let mut changed = false;
         for (relative, text) in files {

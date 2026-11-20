@@ -19,6 +19,7 @@ use std::{
 };
 
 mod channel;
+mod files;
 mod records;
 mod replies;
 
@@ -35,7 +36,6 @@ pub const CHECK_IN_LIFETIME: Duration = Duration::from_secs(20);
 pub const PROMPT_LIFETIME: Duration = Duration::from_secs(3600);
 /// How Claude Code names the plugin once installed: plugin@marketplace.
 pub const PLUGIN_ID: &str = "agent-hud@agent-hud";
-const SCRIPT: &str = include_str!("register.ts");
 
 /// Why words could not be left for a session.
 #[derive(Clone, Debug, PartialEq, Eq)]
