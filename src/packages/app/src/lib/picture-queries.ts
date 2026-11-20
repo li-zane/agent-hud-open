@@ -1,13 +1,16 @@
 import type {
+  CollaborationSide,
+  CollaborationsResponse,
   PlanValueResponse,
   QuotaHistoryResponse,
   SessionsResponse,
 } from "@agent-hud/protocol";
 
 /** The panel's requests that a picture waits for: the token chart's
- * statistics, the sessions list, the quota history and the plan value. */
+ * statistics, the sessions list and its teams, the quota history and the
+ * plan value. */
 export type PanelQuery =
-  "statistics" | "sessions" | "quota_history" | "plan_value";
+  "statistics" | "sessions" | "collaborations" | "quota_history" | "plan_value";
 
 /** How long, from the picture page's start, its panel requests may take. The
  * host gives up on the whole picture after 25 s, and WebKit's own picture may
@@ -21,6 +24,7 @@ export const QUERY_DEADLINE_MS = 8_000;
 const SECTION: Record<PanelQuery, string> = {
   statistics: "tokens",
   sessions: "sessions",
+  collaborations: "sessions",
   quota_history: "quotaHistory",
   plan_value: "planValue",
 };
@@ -37,6 +41,24 @@ export function maskedAnswer(method: PanelQuery, value: unknown): unknown {
         title: `Session ${index + 1}`,
         cwd: null,
         logPath: null,
+      })),
+    };
+  }
+  if (method === "collaborations") {
+    // The same session keeps one name across its links, so teams still join.
+    const response = value as CollaborationsResponse;
+    const names = new Map<string, string>();
+    const masked = (side: CollaborationSide) => {
+      const key = `${side.client}\u0000${side.id}`;
+      if (!names.has(key)) names.set(key, `Session ${names.size + 1}`);
+      return { ...side, title: names.get(key)!, project: null };
+    };
+    return {
+      ...response,
+      links: response.links.map((link) => ({
+        ...link,
+        from: masked(link.from),
+        to: masked(link.to),
       })),
     };
   }

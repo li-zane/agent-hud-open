@@ -21,6 +21,7 @@ mod preferences;
 mod send;
 mod snapshot;
 mod start;
+mod teams;
 #[cfg(test)]
 mod tests;
 mod tools;

@@ -45,3 +45,43 @@ test("the quota history and the plan value are named while loading and drawn wit
   }) as { accounts: { name: string }[] };
   assert.equal(value.accounts[0].name, "Account 1");
 });
+
+test("a picture draws teams without session titles or folders, each session one name", () => {
+  const side = (id: string, title: string) => ({
+    client: "codex",
+    id,
+    title,
+    project: "/Users/me/secret",
+  });
+  const masked = maskedAnswer("collaborations", {
+    links: [
+      {
+        from: side("a", "Payroll"),
+        to: side("b", "Bank"),
+        kinds: ["send"],
+        count: 1,
+        lastAtMs: 2,
+      },
+      {
+        from: side("a", "Payroll"),
+        to: side("c", "Tax"),
+        kinds: ["start"],
+        count: 1,
+        lastAtMs: 1,
+      },
+    ],
+  }) as {
+    links: {
+      from: { title: string; project: string | null };
+      to: { title: string; project: string | null };
+    }[];
+  };
+  const names = masked.links.flatMap((link) => [
+    link.from.title,
+    link.to.title,
+  ]);
+  assert.deepEqual(names, ["Session 1", "Session 2", "Session 1", "Session 3"]);
+  assert.ok(
+    masked.links.every((link) => !link.from.project && !link.to.project),
+  );
+});

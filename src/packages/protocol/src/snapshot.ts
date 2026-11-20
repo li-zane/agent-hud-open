@@ -152,6 +152,7 @@ export type NativeMethod =
   | "quota_history"
   | "plan_value"
   | "sessions"
+  | "collaborations"
   | "refresh"
   | "set_setting"
   | "antigravity_cli_status"

@@ -67,6 +67,19 @@ pub(crate) async fn native_request(
                     params.get("params").cloned().unwrap_or(Value::Null),
                 );
         }
+        // Who worked with whom through agent messages, for the HUD's sessions
+        // list. Their owner takes the Backend lock for its snapshot, so it is
+        // asked with that lock released.
+        if method == "collaborations" {
+            let messages = backend
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .messages
+                .clone();
+            return messages
+                .ok_or("Application data is loading")?
+                .collaborations();
+        }
         let mut params=params;
         // The demo never reaches outside its own folder: no login item, no
         // client's hooks.

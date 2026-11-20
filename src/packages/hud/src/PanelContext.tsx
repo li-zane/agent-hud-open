@@ -44,7 +44,7 @@ export interface InspectServices {
 }
 /** What a panel section asks Core. */
 export type PanelQueryMethod =
-  "statistics" | "sessions" | "quota_history" | "plan_value";
+  "statistics" | "sessions" | "collaborations" | "quota_history" | "plan_value";
 import {
   noAnswer,
   settled,

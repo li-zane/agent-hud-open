@@ -113,6 +113,18 @@ impl AgentMessages {
             .call(params, &host, chrono::Utc::now().timestamp_millis())
     }
 
+    /// Who worked with whom through these tools in the past week, for the
+    /// HUD's sessions list. Read only, so the group need not be on; it takes
+    /// the application's lock for the snapshot, so its caller must not hold it.
+    pub(crate) fn collaborations(&self) -> Result<Value, String> {
+        let snapshot = self.snapshot()?;
+        Ok(self
+            .messaging
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .collaborations(&snapshot))
+    }
+
     /// Runs `work` with the group's senders and this moment's facts, for the
     /// person's own words from the HUD's clipboard window, which do not need
     /// the group switched on.

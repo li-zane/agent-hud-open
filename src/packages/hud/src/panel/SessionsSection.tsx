@@ -12,6 +12,7 @@ import { useGround } from "../ground";
 import { useT } from "@agent-hud/ui/format-context";
 import { useListedSessions } from "./listed-sessions";
 import { noSessionsMatch } from "./session-filters";
+import { TeamMark, TeamsStrip, useTeams } from "./CollaborationTeams";
 
 /** One line of text that shortens with an ellipsis where it does not fit. */
 const clipped: CSSProperties = {
@@ -54,6 +55,8 @@ export function SourceSessions({
       ? layout.agents.map((source) => sourceID(snapshot, source))
       : undefined;
   const week = layout.period === "week";
+  // Sessions working together through agent messages, in the same window.
+  const team = useTeams(snapshot, week, active);
   const query = usePanelQuery<SessionsResponse>(
     "sessions",
     {
@@ -147,6 +150,15 @@ export function SourceSessions({
           {status}
         </span>
       </button>
+      {/* An agent's own panel lists only its sessions; teams span agents. */}
+      {!focusVendor && (
+        <TeamsStrip
+          teams={team.teams}
+          light={light}
+          Logo={Logo}
+          colors={colors}
+        />
+      )}
       {sessions.slice(0, limit).map((session) => (
         // The whole row opens the session's page, as its heading opens the list.
         <button
@@ -185,6 +197,9 @@ export function SourceSessions({
             parts={sessionTitleParts(session.title, session.cwd)}
             untitled={t("(untitled session)")}
           />
+          {team.teamOf(session.source, session.id) >= 0 && (
+            <TeamMark color={colors.secondary} />
+          )}
           <span
             style={{
               ...tabular,

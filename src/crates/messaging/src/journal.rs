@@ -152,6 +152,10 @@ impl Journal {
             .map(|message| message.id.clone())
             .collect()
     }
+    /// Every message kept, oldest first.
+    pub fn messages(&self) -> &[Message] {
+        &self.messages
+    }
     pub fn messages_mut(&mut self) -> impl Iterator<Item = &mut Message> {
         self.messages.iter_mut()
     }
