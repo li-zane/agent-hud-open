@@ -1,6 +1,7 @@
 export type * from "./snapshot.ts";
 export type * from "./quota.ts";
 export type * from "./session.ts";
+export type * from "./collaboration.ts";
 export type * from "./session-detail.ts";
 export type * from "./statistics.ts";
 export type * from "./providers.ts";
