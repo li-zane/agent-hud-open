@@ -33,6 +33,9 @@ fn the_plugin_files_point_at_the_channel_and_are_written_once() {
         serde_json::from_slice(&fs::read(folder.join(".claude-plugin/plugin.json")).unwrap())
             .unwrap();
     assert_eq!(manifest["name"], "agent-hud");
+    // The /team command ships with the plugin and points at the agent-team skill.
+    let command = fs::read_to_string(folder.join("commands/team.md")).unwrap();
+    assert!(command.contains("agent-team"));
     assert!(
         channel.directory().join("sessions").is_dir()
             && channel.directory().join("prompts").is_dir()
