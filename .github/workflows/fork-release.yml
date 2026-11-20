@@ -1,0 +1,97 @@
+name: Fork release (Windows, MSVC)
+
+# Builds this fork's Windows release with Microsoft's toolchain, as the
+# official app is built: the WebView2 loader is linked into the app, so it
+# needs no DLL beside it. A fork tag such as v0.6.8-3 publishes a GitHub
+# release; a manual run keeps the files as an artifact only. Upstream's own
+# workflows stay as they are, so syncing upstream never conflicts here.
+
+on:
+  push:
+    tags: ['v*-*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fork-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Report the Rust host (must be MSVC)
+        shell: pwsh
+        run: |
+          $host_line = rustc -vV | Select-String '^host:'
+          $host_line
+          if ($host_line -notmatch 'windows-msvc') { throw 'The release must be built with the MSVC toolchain' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - name: Build the Windows installer and app
+        run: pnpm run build:windows -- --bundle
+      - name: Check the app needs no DLL beside it
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $dumpbin = & $vswhere -latest -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
+          $dependents = & $dumpbin /dependents 'target/release/Agent HUD.exe'
+          $dependents
+          if ($dependents -match 'WebView2Loader|libunwind') { throw 'The app still needs a DLL beside it' }
+      - name: Package the release files
+        shell: pwsh
+        run: |
+          $version = (Get-Content src/apps/desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          New-Item -ItemType Directory -Force release | Out-Null
+          $installers = @(Get-ChildItem 'target/release/bundle/nsis/*-setup.exe')
+          if ($installers.Count -ne 1) { throw 'Expected one NSIS installer' }
+          Copy-Item $installers[0].FullName "release/Agent-HUD-$version-windows-x86_64-unsigned-setup.exe"
+          Copy-Item 'target/release/Agent HUD.exe' "release/Agent-HUD-$version-windows-x86_64-app.exe"
+          Get-ChildItem release -Filter *.exe | ForEach-Object {
+            "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content release/SHA256SUMS
+          @{
+            version = $version
+            revision = $env:GITHUB_SHA
+            run = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            toolchain = 'x86_64-pc-windows-msvc'
+            signed = $false
+          } | ConvertTo-Json | Set-Content release/provenance.json
+          Get-ChildItem release | Format-Table Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-hud-fork-windows-x86_64
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          Agent HUD $env:GITHUB_REF_NAME: the official release named before the dash, with this fork's agent-team workflow on top (the agent-team skill for every client, the /team command, and the sessions working together in the HUD).
+
+          Built by GitHub Actions with the MSVC toolchain; unsigned, like the official Windows test builds.
+
+          - ``*-setup.exe``: the installer, for a new install. It installs every part of the app, including ``agent-hud-engine.exe``.
+          - ``*-app.exe``: the app alone. To update an existing install without touching its other parts, quit Agent HUD and put it in place of ``Agent HUD.exe``.
+          - ``SHA256SUMS`` and ``provenance.json``: checksums, and the commit and run that built them.
+          "@
+          gh release create $env:GITHUB_REF_NAME (Get-ChildItem release).FullName --repo $env:GITHUB_REPOSITORY --title "Agent HUD $env:GITHUB_REF_NAME" --notes $notes
