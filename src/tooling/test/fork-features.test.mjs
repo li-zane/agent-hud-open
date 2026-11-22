@@ -9,6 +9,7 @@ import {
   pendingOptions,
   printFeatures,
   repositoryRoot,
+  toolVocabulary,
 } from "../fork-features.mjs";
 import { runCommand } from "../fork-process.mjs";
 import { featureFixture, read, replace, write } from "./fork-fixture.mjs";
@@ -94,17 +95,39 @@ for (const path of [skill, command]) {
     );
     const failed = failures(root);
     assert.equal(failed.length, 1);
-    assert.match(failed[0].detail, /get_message, archive_session/);
+    assert.match(failed[0].detail, /archive_session, get_message/);
   });
 }
 
-test("retirement notices and argument fields are not calls", () => {
+test("a code span or a call is an instruction, plain prose is not", () => {
+  // However a retirement notice is phrased, and in whichever language, the
+  // gone tool is named in plain prose and so is not read as an instruction.
   assert.deepEqual(
     mentionedTools(
-      "没有 `get_message` 可查。there is no `poll_messages` to call. `reply_to` / `require_reply`. Call `mcp__agent-hud__send_message` instead.",
+      "官方删掉了 get_message，poll_messages is gone too. Call `mcp__agent-hud__send_message` instead.",
     ),
     ["send_message"],
   );
+  // A code span counts even without parentheses, and every name inside one
+  // counts, so arguments are seen as well as the tool.
+  assert.deepEqual(
+    mentionedTools("`send_message({ text, reply_to })` then `list_sessions`"),
+    ["send_message", "reply_to", "list_sessions"],
+  );
+  // A call written outside a code span still instructs.
+  assert.deepEqual(mentionedTools("run get_message({ id }) after"), [
+    "get_message",
+  ]);
+});
+
+test("the tool table supplies both tool names and their arguments", () => {
+  const table = toolVocabulary(
+    '{"name":"send_message","readOnly":false,"inputSchema":{"type":"object",' +
+      '"properties":{"to":{"type":"string"},"reply_to":{"type":"string"}}}}',
+  );
+  assert.equal(table.has("send_message"), true);
+  assert.equal(table.has("reply_to"), true);
+  assert.equal(table.has("get_message"), false);
 });
 
 test("removing an advertised tool from the table fails both documents", (t) => {

@@ -32,32 +32,36 @@ const translationKeys = [
   "No teammates yet.",
 ];
 
+/** The snake_case names a document hands an agent to type: those inside a
+ * code span, and those written as a call. Judging by form rather than by the
+ * prose around it keeps this honest in any language — a retirement notice
+ * names the gone tool in plain prose ("官方删掉了 get_message"), which reads
+ * the same to a person and does not instruct anyone to call it. */
 export function mentionedTools(text) {
   const names = new Set();
-  for (const match of text.matchAll(
-    /\b(?:mcp__[\w-]+__)?[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g,
-  )) {
-    const at = match.index;
-    const name = match[0].split("__").at(-1);
-    if (["reply_to", "require_reply"].includes(name)) continue;
-    const before = text.slice(Math.max(0, at - 80), at);
-    const after = text.slice(at + match[0].length, at + match[0].length + 70);
-    // Retirement notices are useful documentation, not instructions to call.
-    if (
-      /(?:没有|不存在|不再(?:有|提供|使用)?|不要(?:再)?(?:用|使用)?|no(?: longer)?|without|removed|retired|do not use)\s*`?$/i.test(
-        before,
-      )
-    )
-      continue;
-    if (
-      /^`?\s*(?:不存在|已删除|不可用|is (?:unavailable|removed|no longer available))/i.test(
-        after,
-      )
-    )
-      continue;
-    names.add(name);
-  }
+  const identifier = /(?:mcp__[\w-]+__)?([a-z][a-z0-9]*(?:_[a-z0-9]+)+)/g;
+  for (const span of text.matchAll(/`([^`\n]+)`/g))
+    for (const match of span[1].matchAll(identifier)) names.add(match[1]);
+  for (const call of text.matchAll(
+    /(?:mcp__[\w-]+__)?([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\s*\(/g,
+  ))
+    names.add(call[1]);
   return [...names];
+}
+
+/** What the MCP tool table offers a document: the tools an agent may call,
+ * and the snake_case arguments they take. Read from the table itself, so an
+ * argument upstream renames is caught the same way a tool is. An argument is
+ * a quoted name used as a key — `"reply_to": {` in a schema, or
+ * `["require_reply"] =` where the table adds one at runtime — so a name that
+ * merely appears inside a description is not mistaken for one. */
+export function toolVocabulary(source) {
+  const all = (pattern) =>
+    new Set([...source.matchAll(pattern)].map((match) => match[1]));
+  return new Set([
+    ...all(/\{\s*"name"\s*:\s*"([a-z][a-z0-9_]*)"\s*,\s*"readOnly"/g),
+    ...all(/"([a-z][a-z0-9]*(?:_[a-z0-9]+)+)"\s*[:\]]/g),
+  ]);
 }
 
 export function pendingOptions(argv) {
@@ -246,20 +250,19 @@ export function checkFeatures(root = repositoryRoot, { pendingTag } = {}) {
       `tool-names:${path}`,
       "技能和命令指导调用的工具必须仍在 MCP 工具表中",
       () => {
-        const available = new Set(
-          [
-            ...code("src/crates/messaging/src/tools.rs").matchAll(
-              /\{\s*"name"\s*:\s*"([a-z][a-z0-9_]*)"\s*,\s*"readOnly"/g,
-            ),
-          ].map((match) => match[1]),
+        const available = toolVocabulary(
+          code("src/crates/messaging/src/tools.rs"),
         );
         if (!available.size) return "messaging/src/tools.rs 中未找到工具表";
         const mentioned = mentionedTools(read(path));
-        const missing = mentioned.filter((name) => !available.has(name));
+        // Sorted, so the report reads the same whichever order the document
+        // happens to name them in.
+        const missing = mentioned.filter((name) => !available.has(name)).sort();
         return !mentioned.length
           ? `${path} 没有工具调用说明`
           : missing.length
-            ? `${path} 引用了已移除工具：${missing.join(", ")}`
+            ? `${path} 引用了已移除工具：${missing.join(", ")}。` +
+              "若是在说明某个工具已经没了，把名字写成不带反引号的正文即可。"
             : true;
       },
     );
