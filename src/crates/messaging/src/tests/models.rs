@@ -109,3 +109,46 @@ fn a_named_model_goes_only_where_the_client_takes_one_and_only_one_it_offers() {
     .unwrap();
     assert!(left.get("model").is_none());
 }
+
+#[test]
+fn antigravity_resolves_a_named_model_from_the_recipients_catalog() {
+    let mut world = World::on();
+    world.antigravity();
+    let me = ("claude", CLAUDE);
+
+    let unknown = world.raw(
+        Some(me),
+        "send_message",
+        json!({"to":ANTIGRAVITY,"text":"Review it","model":"Unavailable model"}),
+    );
+    assert_eq!(unknown["delivered"], false);
+    assert!(unknown["reason"]
+        .as_str()
+        .unwrap()
+        .contains("offers no model named Unavailable model"));
+    assert!(world.antigravity_transport.sends.lock().unwrap().is_empty());
+    assert!(world.messaging.journal.messages().is_empty());
+
+    let sent = world.raw(
+        Some(me),
+        "send_message",
+        json!({"to":ANTIGRAVITY,"text":"Review it","model":"gemini 4 neon (high)"}),
+    );
+    assert_eq!(sent["delivered"], true, "{sent}");
+    let own = world.raw(
+        Some(me),
+        "send_message",
+        json!({"to":ANTIGRAVITY,"text":"Continue"}),
+    );
+    assert_eq!(own["delivered"], true, "{own}");
+
+    let transport = &world.antigravity_transport;
+    assert_eq!(
+        transport.catalog_requests.lock().unwrap().as_slice(),
+        [ANTIGRAVITY, ANTIGRAVITY]
+    );
+    let sends = transport.sends.lock().unwrap();
+    assert_eq!(sends.len(), 2);
+    assert_eq!(sends[0].model.as_deref(), Some("MODEL_PLACEHOLDER_M532"));
+    assert_eq!(sends[1].model, None);
+}

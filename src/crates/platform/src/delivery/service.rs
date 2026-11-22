@@ -47,6 +47,10 @@ impl LocalClients {
         self.antigravity = antigravity;
         self
     }
+    /// Read the model catalog for sending a message to an existing cascade.
+    pub fn antigravity_models_for_session(&self, session_id: &str) -> Result<models::Models> {
+        self.antigravity.models_for_session(session_id)
+    }
     /// Messages into DeepSeek Harness sessions go through Agent HUD's plugin
     /// and the folder it shares with the app (in Agent HUD's data folder,
     /// `crate::deepseek_plugin::channel_directory`).

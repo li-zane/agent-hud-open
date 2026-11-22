@@ -26,7 +26,7 @@ impl Messaging {
         if let Some(reason) = check_text(text, language) {
             return Ok(refused(&reason));
         }
-        let model = match self.named_model(client, arguments, false, language) {
+        let model = match self.named_model(client, arguments, None, language) {
             Ok(model) => model,
             Err(reason) => return Ok(refused(&reason)),
         };

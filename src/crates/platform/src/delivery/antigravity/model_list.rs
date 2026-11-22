@@ -7,7 +7,9 @@ use super::*;
 
 /// The models the running language server offers now.
 pub fn models() -> Result<models::Models> {
-    let status = call("GetUserStatus", json!({ "metadata": metadata() }))?;
+    let status =
+        crate::clients::antigravity::service::user_status(&json!({ "metadata": metadata() }))
+            .map_err(Failure::Unavailable)?;
     Ok(listed(&status, picker::picked()))
 }
 
@@ -63,6 +65,18 @@ fn model_id(model_or_alias: &Value) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "requires a running, signed-in Antigravity on this machine"]
+    fn lists_models_from_a_running_antigravity_service() {
+        let models = models().expect("read Antigravity model catalog");
+        let first = models.models.first().expect("Antigravity offers a model");
+        assert_eq!(
+            models.resolve(&first.name).as_deref(),
+            Some(first.id.as_str())
+        );
+        println!("Read {} Antigravity models", models.models.len());
+    }
 
     #[test]
     fn lists_what_the_status_offers_with_the_quota_left_and_the_pickers_default() {

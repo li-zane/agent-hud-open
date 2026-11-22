@@ -236,6 +236,17 @@ pub fn read_accounts(params: &Value) -> Result<Value, String> {
     Ok(json!({"accounts":accounts,"partial":partial,"cliExecutable":cli}))
 }
 
+/// Model discovery uses the read-only account channel, available on Windows.
+pub(crate) fn user_status(params: &Value) -> Result<Value, String> {
+    if !crate::clients::runs(&agent_hud_agents::antigravity::ACCOUNT_SERVICE) {
+        return Err(format!(
+            "Antigravity account service acquisition is unsupported on {}",
+            std::env::consts::OS
+        ));
+    }
+    call_running("GetUserStatus", params)
+}
+
 /// Quota reads may use the first readable service. Pending permissions instead
 /// retain and revalidate an explicit Endpoint through `endpoints(true)`.
 pub fn call(method: &str, params: &Value) -> Result<Value, String> {
@@ -246,6 +257,10 @@ pub fn call(method: &str, params: &Value) -> Result<Value, String> {
             std::env::consts::OS
         ));
     }
+    call_running(method, params)
+}
+
+fn call_running(method: &str, params: &Value) -> Result<Value, String> {
     let service = service()?;
     for endpoint in service.cached() {
         if let Ok(value) = service.send(&endpoint, method, params) {

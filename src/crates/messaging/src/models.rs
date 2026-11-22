@@ -37,12 +37,12 @@ impl Messaging {
 
     /// The model `arguments` names for `client`, as the client names it:
     /// None when none is named; a refusal when the client cannot take one
-    /// here (`per_message` for a send) or offers none by that name.
+    /// here or offers none by that name. `recipient` is set for a send.
     pub(crate) fn named_model(
         &self,
         client: &str,
         arguments: &Value,
-        per_message: bool,
+        recipient: Option<&str>,
         language: Language,
     ) -> std::result::Result<Option<String>, String> {
         let Some(asked) = arguments["model"]
@@ -53,16 +53,19 @@ impl Messaging {
             return Ok(None);
         };
         let provider = provider(client);
-        if per_message && !models::per_message(provider) {
+        if recipient.is_some() && !models::per_message(provider) {
             return Err(words::model_per_message(language, client));
         }
-        if !per_message && !self.starts.model_at_start(provider) {
+        if recipient.is_none() && !self.starts.model_at_start(provider) {
             return Err(words::model_at_start(language, client));
         }
-        let listed = self
-            .starts
-            .models(provider)
-            .map_err(|error| words::models_unread(language, client, &plain(&error.to_string())))?;
+        let listed = match (provider, recipient) {
+            (Provider::Antigravity, Some(session)) => {
+                self.clients.antigravity_models_for_session(session)
+            }
+            _ => self.starts.models(provider),
+        }
+        .map_err(|error| words::models_unread(language, client, &plain(&error.to_string())))?;
         listed
             .resolve(asked)
             .map(Some)

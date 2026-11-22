@@ -11,6 +11,10 @@ pub(crate) const OPERATIONS: &[Operation] = &[
 ];
 pub(crate) const NOTICE: &str = "Connects to the running Antigravity local language server.";
 
+pub(super) fn models_for_session(_cascade_id: &str) -> Result<models::Models> {
+    models()
+}
+
 pub(super) fn interrupt(cascade_id: &str) -> Result<()> {
     call(
         "CancelCascadeInvocation",

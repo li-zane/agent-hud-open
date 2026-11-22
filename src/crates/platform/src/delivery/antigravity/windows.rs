@@ -5,6 +5,7 @@
 //! does for a message.
 use super::cascade_config::{choose, latest_turn_config};
 use super::*;
+use crate::clients::antigravity::service::{message_session, MessageError};
 
 /// What a message may ask for: no interrupt.
 pub(crate) const OPERATIONS: &[Operation] = &[
@@ -14,6 +15,12 @@ pub(crate) const OPERATIONS: &[Operation] = &[
     Operation::Enqueue,
 ];
 pub(crate) const NOTICE: &str = "Sends to an existing uniquely identified session on its running Antigravity local language server. Interrupt and new-session start remain unavailable on Windows.";
+
+pub(super) fn models_for_session(cascade_id: &str) -> Result<models::Models> {
+    let session = message_session(cascade_id).map_err(windows_message_error)?;
+    let status = session.user_status().map_err(windows_message_error)?;
+    Ok(model_list::listed(&status, picker::picked()))
+}
 
 /// Interrupting is not adapted on Windows.
 pub(super) fn interrupt(_cascade_id: &str) -> Result<()> {
@@ -32,7 +39,6 @@ pub(super) fn send(
     strategy: &str,
     model: Option<&str>,
 ) -> Result<Option<String>> {
-    use crate::clients::antigravity::service::message_session;
     let session = message_session(cascade_id).map_err(windows_message_error)?;
     let (config, note) = choose(
         latest_turn_config(cascade_id, |method, body| session.read(method, &body)),
@@ -45,8 +51,7 @@ pub(super) fn send(
     Ok(note)
 }
 
-fn windows_message_error(error: crate::clients::antigravity::service::MessageError) -> Failure {
-    use crate::clients::antigravity::service::MessageError;
+fn windows_message_error(error: MessageError) -> Failure {
     match error {
         MessageError::Unavailable(reason) => Failure::Unavailable(reason),
         MessageError::Invalid(reason) => Failure::InvalidInput(reason),

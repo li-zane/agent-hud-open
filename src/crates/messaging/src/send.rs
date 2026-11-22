@@ -80,7 +80,7 @@ impl Messaging {
             }
         }
         // A model only when named, and only where a message can switch it.
-        let model = match self.named_model(client, arguments, true, language) {
+        let model = match self.named_model(client, arguments, Some(to), language) {
             Ok(model) => model,
             Err(reason) => return Ok(refused(&reason)),
         };

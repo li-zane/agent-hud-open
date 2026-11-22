@@ -23,6 +23,11 @@ pub(super) use transport::{NOTICE, OPERATIONS};
 
 /// Host injection point for isolated fixtures or the running local language server.
 pub trait AntigravityTransport: Send + Sync {
+    /// The models available for a message to this session.
+    fn models_for_session(&self, _session_id: &str) -> Result<models::Models> {
+        models()
+    }
+
     fn deliver(
         &self,
         target: &SessionTarget,
@@ -36,6 +41,10 @@ pub trait AntigravityTransport: Send + Sync {
 pub struct NativeAntigravityTransport;
 
 impl AntigravityTransport for NativeAntigravityTransport {
+    fn models_for_session(&self, session_id: &str) -> Result<models::Models> {
+        transport::models_for_session(super::antigravity_cascade_id(session_id))
+    }
+
     fn deliver(
         &self,
         target: &SessionTarget,

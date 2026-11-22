@@ -80,14 +80,34 @@ impl CodexTransport for Codex {
 /// An Antigravity language server that queues what it is given.
 struct Antigravity {
     uncertain: bool,
+    catalog_requests: Mutex<Vec<String>>,
+    sends: Mutex<Vec<SendRequest>>,
 }
 impl AntigravityTransport for Antigravity {
+    fn models_for_session(&self, session_id: &str) -> delivery::Result<delivery::models::Models> {
+        self.catalog_requests
+            .lock()
+            .unwrap()
+            .push(session_id.into());
+        Ok(delivery::models::Models {
+            provider: Provider::Antigravity,
+            default: None,
+            models: vec![delivery::models::Model {
+                id: "MODEL_PLACEHOLDER_M532".into(),
+                name: "Gemini 4 Neon (High)".into(),
+                quota: None,
+            }],
+            aliases: false,
+        })
+    }
+
     fn deliver(
         &self,
         target: &SessionTarget,
         request: &SendRequest,
         _timeout: Duration,
     ) -> delivery::Result<Receipt> {
+        self.sends.lock().unwrap().push(request.clone());
         if self.uncertain {
             return Err(delivery::Failure::AcceptanceUncertain);
         }
@@ -369,6 +389,7 @@ impl Transcripts {
 struct World {
     fixture: StartFixture,
     codex: Arc<Codex>,
+    antigravity_transport: Arc<Antigravity>,
     clients: Arc<LocalClients>,
     /// Starts handed on to follow into the desktop app.
     followed: Arc<Mutex<Vec<StartReceipt>>>,
@@ -397,6 +418,11 @@ impl World {
         let channel = fixture.root.join("claude-channel");
         let harness_channel = fixture.root.join("deepseek-channel");
         let codex = Arc::new(Codex::default());
+        let antigravity_transport = Arc::new(Antigravity {
+            uncertain,
+            catalog_requests: Mutex::default(),
+            sends: Mutex::default(),
+        });
         let clients = Arc::new(
             LocalClients::with_transport(
                 LocalClientPaths {
@@ -410,7 +436,7 @@ impl World {
             )
             .unwrap()
             .with_deepseek_channel(Some(harness_channel.clone()))
-            .with_antigravity_transport(Arc::new(Antigravity { uncertain })),
+            .with_antigravity_transport(antigravity_transport.clone()),
         );
         let followed = Arc::new(Mutex::new(Vec::new()));
         let follow = followed.clone();
@@ -451,6 +477,7 @@ impl World {
         let world = Self {
             fixture,
             codex,
+            antigravity_transport,
             clients,
             followed,
             flights,
