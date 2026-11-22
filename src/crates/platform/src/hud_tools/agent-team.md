@@ -13,14 +13,26 @@ Agent HUD 把它的消息工具加到了这个客户端，MCP server 名为 `age
 
 ## 工具（协作四件套）
 
-- `list_sessions({})` — 发现当前会话。返回每个会话的 `client`、`id`、`project`、`cwd`、`state`、`reachable`、`self`。**先用它**找同目录、同角色的已有会话来复用。
+- `list_sessions({})` — 发现当前会话。返回每个会话的 `client`、`id`、`project`、`cwd`、`state`、`reachable`、`self`。**先用它**找同目录、同角色的已有会话来复用。人在 Agent HUD 设置里存过团队时，它还会返回 `teams`（见下）。
 - `start_session({ client, text, folder })` — 在某个 harness 新开一个会话并发首条任务。**务必传 `folder`**（见下）。返回一个可追踪的 message id。
 - `send_message({ text, to, reply_to? })` — 给已有会话（`to` = 它的 session id）派活或追问。返回 message id 与排队状态。
 - `get_message({ id })` — 按 message id 读回：送达/执行/完成状态与对方回复。派活后用它收结果，别空等。
 
 消息状态：`queued` 排队、`taken` 已领、`started` 执行中、`done` 完成、`replied` 已回信，以及 `refused`、`expired`、`uncertain`。
 
-## 角色花名册（默认绑定，可改）
+## 角色花名册
+
+### 人存过的团队优先
+
+`list_sessions` 返回里有 `teams` 时，那是人在 **Agent HUD → Settings → Agents** 里亲手存的花名册，**按它来，别用下面的默认表**。每个团队给出：
+
+- `name` — 团队名；`folder` — 这个团队服务的项目目录（没有这个键就是不限项目）。
+- `limit` — 每个成员同时最多接几项任务，按它控制在手任务数。
+- `members` — 每人一条：`client`（哪个客户端）、`role`（担任什么角色），以及 `session`（人指定了具体会话时才有，直接发给它）。
+
+成员没给 `session` 时，照下面「同目录派活」的办法，在 `folder` 里找该 `client` 的会话来复用，找不到就在 `folder` 里开一个。`folder` 和当前项目目录不一致时，以 `folder` 为准，并跟人说一声。
+
+### 默认建议绑定（没有存过团队时才用）
 
 角色是职责，不是固定的某个客户端；下面是**默认建议绑定**，人可以随时改绑。
 
@@ -61,7 +73,7 @@ Agent HUD 把它的消息工具加到了这个客户端，MCP server 名为 `age
 
 ## 协调闭环
 
-1. **拆**：把需求拆成角色明确、依赖清晰的任务；每个成员同时最多 1 项在手。
+1. **拆**：把需求拆成角色明确、依赖清晰的任务；每个成员同时在手的任务不超过团队的 `limit`（没有存过团队时按 1 项）。
 2. **派**：按上面的模板派发；有依赖的后置任务等前置交付后再派（方案定了再派 UI/后端，素材齐了再整合）。
 3. **读回**：用 `get_message` 收结果，别空等、别猜；`refused`/`expired` 就重试或换人。
 4. **验收**：看实际产物（文件/diff/运行结果），通过才算完成。

@@ -1519,5 +1519,22 @@
   "Cursor's quota reading is off in Settings, so Grok Bot is read without Cursor's sign-in.": "Cursor 的額度讀取已在設定中關閉，所以讀取 Grok Bot 時不用 Cursor 的登入資訊。",
   "Working together": "協作中",
   "Sessions working together through Agent HUD": "透過 Agent HUD 互相協作的工作階段",
-  "In a team with other sessions": "與其他工作階段協作中"
+  "In a team with other sessions": "與其他工作階段協作中",
+  "Teams": "團隊",
+  "Who plays which role when an agent splits work across clients.": "一個 agent 把工作拆給其他用戶端時，誰擔任什麼角色。",
+  "Add a team": "新增團隊",
+  "Change": "修改",
+  "No teammates yet.": "還沒有成員。",
+  "Any project": "不限專案",
+  "Team name": "團隊名稱",
+  "A name you will recognise": "一個你認得出的名字",
+  "Project folder": "專案資料夾",
+  "Teammates start here, so they read this project's own instructions.": "成員在這個目錄裡開會話，從而讀到該專案自己的規範。",
+  "Tasks at once": "同時在手的任務",
+  "How many one member holds before the coordinator waits.": "一個成員最多接幾項，超過則協調者等待。",
+  "Role": "角色",
+  "What they do": "負責什麼",
+  "Teammate": "成員",
+  "A client, and the role it plays.": "一個用戶端，和它擔任的角色。",
+  "Your teams, in Settings → Agents": "你的團隊，在設定 → Agent"
 }

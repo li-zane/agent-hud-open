@@ -1519,5 +1519,22 @@
   "Cursor's quota reading is off in Settings, so Grok Bot is read without Cursor's sign-in.": "설정에서 Cursor의 사용량 한도 읽기가 꺼져 있어, Grok Bot은 Cursor의 로그인 정보 없이 읽습니다.",
   "Working together": "협업 중",
   "Sessions working together through Agent HUD": "Agent HUD로 협업 중인 세션",
-  "In a team with other sessions": "다른 세션과 협업 중"
+  "In a team with other sessions": "다른 세션과 협업 중",
+  "Teams": "팀",
+  "Who plays which role when an agent splits work across clients.": "에이전트가 여러 클라이언트에 작업을 나눌 때 누가 어떤 역할을 맡는지.",
+  "Add a team": "팀 추가",
+  "Change": "변경",
+  "No teammates yet.": "아직 구성원이 없습니다.",
+  "Any project": "모든 프로젝트",
+  "Team name": "팀 이름",
+  "A name you will recognise": "알아볼 수 있는 이름",
+  "Project folder": "프로젝트 폴더",
+  "Teammates start here, so they read this project's own instructions.": "구성원은 여기서 시작해 이 프로젝트의 지침을 읽습니다.",
+  "Tasks at once": "동시 작업 수",
+  "How many one member holds before the coordinator waits.": "조율자가 기다리기 전에 구성원 한 명이 맡는 수.",
+  "Role": "역할",
+  "What they do": "하는 일",
+  "Teammate": "구성원",
+  "A client, and the role it plays.": "클라이언트와 그가 맡는 역할.",
+  "Your teams, in Settings → Agents": "내 팀, 설정 → 에이전트"
 }

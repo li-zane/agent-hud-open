@@ -14,6 +14,7 @@ import { isChinese, type Translate } from "@agent-hud/ui/format";
 import { useFormat } from "@agent-hud/ui/format-context";
 import { LinkButton, Menu } from "../SettingsControls";
 import { Pill, Row, type SettingsPaneProps } from "../SettingsPrimitives";
+import { AgentTeamsRow } from "./AgentTeamsRow";
 import { ToolSwitchRow } from "./rows";
 
 const LIMITS = [3, 5, 10, 20, 50];
@@ -107,6 +108,9 @@ export function AgentMessagesRow({
             ]}
           />
         </Row>
+        {/* The user's own roster, which `list_sessions` hands the agent that
+         * coordinates; it is read only while messages are on. */}
+        <AgentTeamsRow snapshot={snapshot} action={action} t={t} />
       </ToolSwitchRow>
       {/* Shown with the switch off too: the guide says how to turn it on. */}
       <Row title={t("How agent messages work")}>

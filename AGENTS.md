@@ -15,6 +15,7 @@
 
 - `agent-team` 技能写入每个客户端（Claude、通用目录、Antigravity、DeepSeek），Claude Code 插件附带 `/team` 命令。
 - HUD 会话区显示通过 agent 消息协作的会话（「协作中」）。
+- 团队预设：设置 → 智能体里编辑（`agentTeams` 设置键，校验在 `core/src/agent_teams.rs`，读取在 `messaging/src/preferences.rs`），`list_sessions` 把它交给协调 agent，HUD 会话区显示一行并可点进设置。
 - 正式构建像官方版一样接管客户端钩子（`main.rs` 传入 `canonical_executable`）。
 - `.github/workflows/fork-release.yml`：fork 专用的 Windows MSVC 发布流程。上游自带的工作流不改，同步上游时不会在这里冲突。
 

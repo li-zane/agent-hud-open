@@ -1519,5 +1519,22 @@
   "Cursor's quota reading is off in Settings, so Grok Bot is read without Cursor's sign-in.": "Cursor の使用上限の読み取りが設定でオフのため、Grok Bot は Cursor のサインインを使わずに読み取ります。",
   "Working together": "連携中",
   "Sessions working together through Agent HUD": "Agent HUD 経由で連携しているセッション",
-  "In a team with other sessions": "他のセッションと連携中"
+  "In a team with other sessions": "他のセッションと連携中",
+  "Teams": "チーム",
+  "Who plays which role when an agent splits work across clients.": "エージェントが複数のクライアントに作業を分けるとき、誰がどの役割を担うか。",
+  "Add a team": "チームを追加",
+  "Change": "変更",
+  "No teammates yet.": "まだメンバーがいません。",
+  "Any project": "すべてのプロジェクト",
+  "Team name": "チーム名",
+  "A name you will recognise": "見分けのつく名前",
+  "Project folder": "プロジェクトフォルダー",
+  "Teammates start here, so they read this project's own instructions.": "メンバーはここで始まり、このプロジェクトの指示を読みます。",
+  "Tasks at once": "同時に持つタスク",
+  "How many one member holds before the coordinator waits.": "調整役が待つまでにメンバー 1 人が持てる数。",
+  "Role": "役割",
+  "What they do": "何をするか",
+  "Teammate": "メンバー",
+  "A client, and the role it plays.": "クライアントと、それが担う役割。",
+  "Your teams, in Settings → Agents": "あなたのチーム（設定 → エージェント）"
 }
