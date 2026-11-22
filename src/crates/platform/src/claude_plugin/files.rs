@@ -17,7 +17,7 @@ pub(super) fn plugin_files(channel: &str) -> [(&'static str, String); 5] {
         ),
         (
             ".claude-plugin/plugin.json",
-            json!({"name":"agent-hud","version":"1.2.0","description":"Delivers user-authorized Agent HUD input to this existing session, and ships the agent-team workflow.","author":{"name":"Agent HUD"}}).to_string(),
+            json!({"name":"agent-hud","version":"1.2.1","description":"Delivers user-authorized Agent HUD input to this existing session, and ships the agent-team workflow.","author":{"name":"Agent HUD"}}).to_string(),
         ),
         ("hooks/hooks.json", json!({"modules":["./register.ts"]}).to_string()),
         ("hooks/register.ts", SCRIPT.replace("__AGENT_HUD_CHANNEL_JSON__", channel)),

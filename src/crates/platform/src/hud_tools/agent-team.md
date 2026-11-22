@@ -1,6 +1,6 @@
 ---
 name: agent-team
-description: Run a multi-agent team across harnesses through Agent HUD's messaging tools (list_sessions, start_session, send_message, get_message). Use it when the person wants to split a task across several AI clients and have one agent coordinate — assign roles, dispatch work, track replies and hand results back. One agent leads (talks to the person, splits and dispatches) while teammates in other harnesses (Claude Code, Codex, Antigravity, DeepSeek…) take the UI, backend, ops or drafting pieces. Each teammate is opened in the SAME project folder so it inherits the project's AGENTS.md / CLAUDE.md, files and memory; temporary work goes in .tmp/. Use it for "派活给别的 agent", "多 agent 协同", "组个团队做这个", "让 Antigravity 做 Uer, Codex 做后端", "team this up", "/team", "coordinate the agents", and to set up a reusable team workflow in a project.
+description: Run a multi-agent team across harnesses through Agent HUD's messaging tools (list_sessions, start_session, send_message). Use it when the person wants to split a task across several AI clients and have one agent coordinate — assign roles, dispatch work, track replies and hand results back. One agent leads (talks to the person, splits and dispatches) while teammates in other harnesses (Claude Code, Codex, Antigravity, DeepSeek…) take the UI, backend, ops or drafting pieces. Each teammate is opened in the SAME project folder so it inherits the project's AGENTS.md / CLAUDE.md, files and memory; temporary work goes in .tmp/. Use it for "派活给别的 agent", "多 agent 协同", "组个团队做这个", "让 Antigravity 做 Uer, Codex 做后端", "team this up", "/team", "coordinate the agents", and to set up a reusable team workflow in a project.
 metadata:
   managed-by: agent-hud
 ---
@@ -9,16 +9,17 @@ metadata:
 
 Agent HUD 把它的消息工具加到了这个客户端，MCP server 名为 `agent-hud`。本技能用工具自己的名字；你的客户端可能在前面带上 server 名，例如 Claude Code 把 `send_message` 显示为 `mcp__agent-hud__send_message`。
 
-你是**协调者**：和人沟通、拆任务、派发、读回、验收、汇报。队友是**别的 harness 里、同一个项目文件夹下**的会话。本技能只用现有消息工具编排，不需要任何新功能。
+你是**协调者**：和人沟通、拆任务、派发、收结果、验收、汇报。队友是**别的 harness 里、同一个项目文件夹下**的会话。本技能只用现有消息工具编排，不需要任何新功能。
 
-## 工具（协作四件套）
+## 工具（协作三件套）
 
 - `list_sessions({})` — 发现当前会话。返回每个会话的 `client`、`id`、`project`、`cwd`、`state`、`reachable`、`self`。**先用它**找同目录、同角色的已有会话来复用。人在 Agent HUD 设置里存过团队时，它还会返回 `teams`（见下）。
-- `start_session({ client, text, folder })` — 在某个 harness 新开一个会话并发首条任务。**务必传 `folder`**（见下）。返回一个可追踪的 message id。
-- `send_message({ text, to, reply_to? })` — 给已有会话（`to` = 它的 session id）派活或追问。返回 message id 与排队状态。
-- `get_message({ id })` — 按 message id 读回：送达/执行/完成状态与对方回复。派活后用它收结果，别空等。
+- `start_session({ client, text, folder, require_reply? })` — 在某个 harness 新开一个会话并发首条任务。**务必传 `folder`**（见下）。返回 `delivered` 和新会话的 `sessionId`。
+- `send_message({ text, to, reply_to?, require_reply? })` — 给已有会话（`to` = 它的 session id）派活或追问。返回 `delivered`。
 
-消息状态：`queued` 排队、`taken` 已领、`started` 执行中、`done` 完成、`replied` 已回信，以及 `refused`、`expired`、`uncertain`。
+**返回值只说「话有没有递出去」**：`delivered: true` 递到了，`false`（带原因）没递出去，`null`（带原因）可能递到了但没确认——**不要重发**。它**不**告诉你对方做完没有。
+
+**结果怎么回来**：对方做完后用 `send_message` 回你的消息，会在你空闲时**作为新的一轮**自动送到你会话里——不用轮询，也没有 `get_message` 可查。派活时想要回信，就传 `require_reply: true`（这条消息才会带上「做完回信」的末行）；只在你确实需要答复时才传。`reply_to` 填你收到的那条消息的 id，用来回信给原发送者。
 
 ## 角色花名册
 
@@ -71,11 +72,13 @@ Agent HUD 把它的消息工具加到了这个客户端，MCP server 名为 `age
 【交付】<要什么产物 + 验收标准>；完成后回一条消息说清改了什么、怎么验证。
 ```
 
+要回信就连同 `require_reply: true` 一起发；对方做完会作为新的一轮回到你这里。
+
 ## 协调闭环
 
 1. **拆**：把需求拆成角色明确、依赖清晰的任务；每个成员同时在手的任务不超过团队的 `limit`（没有存过团队时按 1 项）。
-2. **派**：按上面的模板派发；有依赖的后置任务等前置交付后再派（方案定了再派 UI/后端，素材齐了再整合）。
-3. **读回**：用 `get_message` 收结果，别空等、别猜；`refused`/`expired` 就重试或换人。
+2. **派**：按上面的模板派发，需要答复的带 `require_reply: true`；有依赖的后置任务等前置交付后再派（方案定了再派 UI/后端，素材齐了再整合）。
+3. **收结果**：对方的回信会作为新的一轮自动回到你这里，不用轮询、不用猜。递送失败（`delivered: false`）就看原因重试或换人；`delivered: null` 别重发，当作可能已送达处理。
 4. **验收**：看实际产物（文件/diff/运行结果），通过才算完成。
 5. **汇报**：只向人汇报进度、阻塞和待决策项；细节替人消化掉。
 
@@ -98,7 +101,7 @@ Agent HUD 把它的消息工具加到了这个客户端，MCP server 名为 `age
 ## 当工具缺失或被拒
 
 - **没有 `list_sessions` / `send_message` 工具**：这个客户端还没加 HUD 工具。请人打开 Agent HUD → **Settings → Agent plugins**，给这个客户端加 **HUD tools**，再开一个新会话（工具在会话启动时加载）。
-- **消息被 `refused`**：对方会话可能没加载插件（让它 `/reload-plugins` 或重开），或对方关了接收开关。用 `list_sessions` 看 `reachable` 和原因。
-- **`uncertain`**：稍等重试一次 `get_message`。
+- **`delivered: false`**：没递出去，带原因。对方会话可能没加载插件（让它 `/reload-plugins` 或重开），或对方关了接收开关。用 `list_sessions` 看 `reachable` 和原因，再重试或换人。
+- **`delivered: null`**：可能已经递到但没拿到确认，**别重发**，当作已送出，等对方那一轮的回信。
 
 本技能不替人做决定：派发、组队、改约束前，先把计划和影响告诉人，得到同意再做。

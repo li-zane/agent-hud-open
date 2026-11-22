@@ -137,6 +137,7 @@ mod tests {
             answered: false,
             replied_by: None,
             steered_into: None,
+            call: None,
         }
     }
 
