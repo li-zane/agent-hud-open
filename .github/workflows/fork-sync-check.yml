@@ -1,0 +1,121 @@
+name: Fork sync check (Windows, MSVC)
+
+on:
+  schedule:
+    - cron: "15 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fork-sync-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/agent-team
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Require the MSVC toolchain
+        shell: pwsh
+        run: |
+          $rustHost = rustc -vV | Select-String '^host:'
+          $rustHost
+          if ($rustHost -notmatch 'windows-msvc') { throw 'Fork checks require MSVC' }
+      - run: corepack enable
+      - name: Set local replay identity
+        shell: pwsh
+        run: |
+          "GIT_COMMITTER_NAME=Agent HUD fork checks" >> $env:GITHUB_ENV
+          "GIT_COMMITTER_EMAIL=41898282+github-actions[bot]@users.noreply.github.com" >> $env:GITHUB_ENV
+      - name: Find the latest official tag
+        id: probe
+        shell: pwsh
+        run: |
+          git remote add upstream https://github.com/jazzenchen/agent-hud-open.git
+          node src/tooling/fork-sync.mjs --dry-run
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $report = Get-Content .tmp/fork-sync-report.json -Raw | ConvertFrom-Json
+          "new=$($report.status -eq 'planned')" >> $env:GITHUB_OUTPUT
+      - name: Replay and check the fork on a new sync branch
+        if: steps.probe.outputs.new == 'True'
+        shell: pwsh
+        # Install from the replayed lockfile, including any new upstream dependencies.
+        run: |
+          @'
+          import { runSync } from './src/tooling/fork-sync.mjs';
+          import { runChecks } from './src/tooling/fork-check.mjs';
+          import { runCommand } from './src/tooling/fork-process.mjs';
+          const report = runSync({ check(options) {
+            for (const args of [['pnpm', 'install', '--frozen-lockfile'], ['pnpm', 'run', 'build']]) {
+              const result = runCommand('corepack', args, { root: options.root, inherit: true });
+              if (result.status !== 0) throw new Error(`corepack ${args.join(' ')} failed: ${result.status}`);
+            }
+            return runChecks(options);
+          } });
+          process.exitCode = report.exitCode;
+          '@ | node --input-type=module
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check the current fork when already up to date
+        if: steps.probe.outputs.new == 'False'
+        shell: pwsh
+        # Tauri's test binaries embed the frontend; resources alone are insufficient.
+        run: |
+          corepack pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          corepack pnpm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node src/tooling/fork-check.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Create or update the target tag issue
+        if: always() && steps.probe.outputs.new == 'True'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $report = Get-Content .tmp/fork-sync-report.json -Raw | ConvertFrom-Json
+          $title = "Fork sync: $($report.target)"
+          $body = Get-Content .tmp/fork-sync-report.md -Raw
+          if (Test-Path .tmp/fork-check-report.md) {
+            $body += "`n" + (Get-Content .tmp/fork-check-report.md -Raw)
+          } else {
+            $body += "`n检查未运行：原因见同步报告。`n"
+          }
+          $body += "`nRun: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID`n"
+          $body | Set-Content -Encoding utf8 .tmp/fork-sync-issue.md
+          $issues = gh issue list --repo $env:GITHUB_REPOSITORY --state all --search "$title in:title" --limit 100 --json number,title | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $existing = $issues | Where-Object { $_.title -eq $title } | Select-Object -First 1
+          if ($existing) {
+            gh issue edit $existing.number --repo $env:GITHUB_REPOSITORY --title $title --body-file .tmp/fork-sync-issue.md
+          } else {
+            gh issue create --repo $env:GITHUB_REPOSITORY --title $title --body-file .tmp/fork-sync-issue.md
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fork-sync-reports
+          path: |
+            .tmp/fork-sync-report.*
+            .tmp/fork-check-report.*
+          if-no-files-found: ignore
+          retention-days: 30

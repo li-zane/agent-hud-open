@@ -27,11 +27,11 @@
 
 ## 同步上游
 
-1. `git fetch upstream --tags`
-2. 变基到新的**官方标签**上（不是 `upstream/main`）：`git rebase <新官方标签>`。
-3. 本地化文件冲突的处理：先取上游的文件，再把 fork 新增的键追加回去。
-4. 版本计数从 `-1` 重新开始（例如 `v0.6.9-1`）。
-5. 变基改写了历史，推送分支时用 `git push --force-with-lease origin feature/agent-team`。
+1. 先跑 `node src/tooling/fork-sync.mjs --dry-run` 查看计划，再跑 `node src/tooling/fork-sync.mjs`。工具 fetch upstream，从最新的**官方稳定标签**（不是 `upstream/main`）新建 `sync/<标签>`，依次重放 `feature/agent-team` 的 fork 提交，跳过 `Version this fork` 版本提交。可用 `--tag v0.6.12 --onto-branch sync/v0.6.12-review` 指定标签和新分支；工具不改 `feature/agent-team`，也不改版本号、打标签或推送。
+2. 冲突按 `.tmp/fork-sync-report.md`（机器可读版为同名 `.json`）处理；报告列出失败提交、文件、冲突块数和剩余提交。默认设置、本地化等清单冲突：先取上游内容，再追加 fork 的键。人工解决后 `git add`、`git cherry-pick --continue`，再按报告顺序重放剩余提交。
+3. 跑 `node src/tooling/fork-check.mjs --pending-tag <新官方标签>`，一次汇总功能守卫、Rust 格式/编译/测试、TypeScript 类型/测试和仓库边界检查。新标签尚未手工加 fork 后缀时，显式的 `--pending-tag` 仅允许版本号等于该标签；正常工作树直接跑 `node src/tooling/fork-check.mjs`。报告在 `.tmp/fork-check-report.md` 和 `.json`。`node src/tooling/fork-features.mjs` 可单独检查二开功能及技能引用的工具名。
+4. 检查通过后，人工把 `tauri.conf.json` 的版本计数从 `-1` 重新开始（例如 `0.6.12-1`）并提交；版本提交标题以 `Version this fork` 开头，便于下次同步跳过。再跑一次不带 `--pending-tag` 的 `fork-check.mjs`。审阅同步分支后，人工决定何时让 `feature/agent-team` 指向同步结果。
+5. 最后人工打附注标签并推送（见「发布」）。同步改写历史时，分支推送用 `git push --force-with-lease origin feature/agent-team`；已推送的标签不移动。`.github/workflows/fork-sync-check.yml` 每日及手动在 Windows MSVC 上探测和检查，按目标标签创建或更新同名 issue，只报告结果，不推送分支、不打标签、不发版。
 
 ## 发布
 
