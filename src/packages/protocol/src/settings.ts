@@ -1,4 +1,5 @@
 // The app's settings and the HUD panel's layout.
+import type { AgentTeam } from "./collaboration.ts";
 import type { CustomPrice } from "./prices-relays.ts";
 
 export type ApprovalWaitMinutes = 1 | 3 | 5 | 10 | 30 | 60;
@@ -140,6 +141,8 @@ export interface AppSettings {
   agentMessagesAsUser?: boolean;
   /** Passes in a row with no word from the user before agents' messages stop; null for no limit. */
   agentMessagesLimit?: number | null;
+  /** The teams saved for agent messages, which `list_sessions` hands the coordinating agent. */
+  agentTeams?: AgentTeam[];
   /** Messages may go into Claude Code sessions through Agent HUD's plugin; on unless turned off. */
   claudeMessages?: boolean;
   /** Messages may go into DeepSeek Harness sessions through Agent HUD's plugin; on unless turned off. */

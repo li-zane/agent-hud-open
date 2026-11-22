@@ -168,6 +168,9 @@ impl crate::AgentHudCore {
             // looks; null for no limit.
             "agentMessagesLimit"
                 if value.is_null() || value.as_u64().is_some_and(|v| (1..=1000).contains(&v)) => {}
+            // The teams saved for agent messages, which `list_sessions` hands
+            // the coordinating agent (`agent_teams`).
+            "agentTeams" if crate::agent_teams::valid(value) => {}
             "approvalWaitMinutes"
                 if value
                     .as_u64()
@@ -316,6 +319,48 @@ mod tests {
         core.apply_setting("quotaDisplay", &json!("consumed"))
             .unwrap();
         assert_eq!(core.settings["quotaDisplay"], "consumed");
+    }
+
+    #[test]
+    fn agent_teams_persist_and_reject_a_team_that_does_not_hold_together() {
+        let home = tempfile::tempdir().unwrap();
+        let mut core = AgentHudCore::new(vec![], home.path().to_owned());
+        assert_eq!(core.settings["agentTeams"], json!([]));
+        let teams = json!([{
+            "name": "Checkout",
+            "folder": "/work/checkout",
+            "limit": 2,
+            "members": [
+                {"client": "codex", "role": "Backend"},
+                {"client": "claude", "role": "Lead", "session": "claude:abc"},
+            ],
+        }]);
+        core.apply_setting("agentTeams", &teams).unwrap();
+        let reopened = AgentHudCore::new(vec![], home.path().to_owned());
+        assert_eq!(reopened.settings["agentTeams"], teams);
+        // A team keeps a name of its own, a limit within reach, members in a
+        // list, and clients this copy knows.
+        let plain = |name: &str| json!({"name": name, "limit": 1, "members": []});
+        for invalid in [
+            json!([{"name": "", "limit": 1, "members": []}]),
+            json!([plain("Checkout"), plain("Checkout")]),
+            json!([{"name": "Checkout", "limit": 0, "members": []}]),
+            json!([{"name": "Checkout", "limit": 11, "members": []}]),
+            json!([{"name": "Checkout", "limit": 1, "members": {}}]),
+            json!([{"name": "Checkout", "limit": 1, "members": [{"client": "nobody"}]}]),
+            json!([{"name": "Checkout", "limit": 1, "members": [], "folder": 7}]),
+            json!({}),
+        ] {
+            assert!(
+                core.apply_setting("agentTeams", &invalid).is_err(),
+                "{invalid}"
+            );
+            assert_eq!(core.settings["agentTeams"], teams);
+        }
+        // Two teams of different names, and a member bound to no session.
+        let two = json!([plain("Checkout"), plain("Billing")]);
+        core.apply_setting("agentTeams", &two).unwrap();
+        assert_eq!(core.settings["agentTeams"], two);
     }
 
     #[test]

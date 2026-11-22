@@ -685,6 +685,46 @@ fn an_unknown_caller_sends_nothing() {
 }
 
 #[test]
+fn list_sessions_hands_over_the_teams_the_user_saved_and_says_nothing_without_them() {
+    // With none saved the answer holds no teams key at all, so the
+    // coordinator falls back to the roster its skill carries.
+    let mut world = World::on();
+    let list = world.call(Some(("claude", CLAUDE)), "list_sessions", json!({}));
+    assert!(list.get("teams").is_none(), "{list}");
+
+    let mut world = World::new(Preferences {
+        enabled: true,
+        teams: vec![Team {
+            name: "Checkout".into(),
+            folder: Some("/work/checkout".into()),
+            limit: 2,
+            members: vec![
+                TeamMember {
+                    client: "codex".into(),
+                    role: "Backend".into(),
+                    session: None,
+                },
+                TeamMember {
+                    client: "claude".into(),
+                    role: "Lead".into(),
+                    session: Some(CLAUDE.into()),
+                },
+            ],
+        }],
+        ..Default::default()
+    });
+    let list = world.call(Some(("claude", CLAUDE)), "list_sessions", json!({}));
+    // A member the user bound to a session carries it; one left open does not.
+    assert_eq!(
+        list["teams"],
+        json!([{"name":"Checkout","folder":"/work/checkout","limit":2,"members":[
+            {"client":"codex","role":"Backend"},
+            {"client":"claude","role":"Lead","session":CLAUDE}
+        ]}])
+    );
+}
+
+#[test]
 fn list_sessions_shows_main_claude_and_codex_sessions_and_who_takes_a_message() {
     let mut world = World::on();
     let list = world.call(Some(("codex", CODEX)), "list_sessions", json!({}));
@@ -2543,6 +2583,7 @@ impl Preferences {
             "agentMessagesLimit": self.limit,
             "claudeMessages": self.claude,
             "deepseekMessages": self.deepseek,
+            "agentTeams": self.teams,
         })
     }
 }

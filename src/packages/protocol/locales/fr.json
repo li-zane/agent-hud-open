@@ -1585,5 +1585,22 @@
   "Cursor's quota reading is off in Settings, so Grok Bot is read without Cursor's sign-in.": "La lecture du quota de Cursor est désactivée dans les réglages : Grok Bot est donc lu sans la connexion de Cursor.",
   "Working together": "En collaboration",
   "Sessions working together through Agent HUD": "Sessions qui collaborent via Agent HUD",
-  "In a team with other sessions": "En équipe avec d’autres sessions"
+  "In a team with other sessions": "En équipe avec d’autres sessions",
+  "Teams": "Équipes",
+  "Who plays which role when an agent splits work across clients.": "Qui tient quel rôle quand un agent répartit le travail entre plusieurs clients.",
+  "Add a team": "Ajouter une équipe",
+  "Change": "Modifier",
+  "No teammates yet.": "Aucun membre pour l’instant.",
+  "Any project": "N’importe quel projet",
+  "Team name": "Nom de l’équipe",
+  "A name you will recognise": "Un nom que vous reconnaîtrez",
+  "Project folder": "Dossier du projet",
+  "Teammates start here, so they read this project's own instructions.": "Les membres démarrent ici, et lisent donc les instructions de ce projet.",
+  "Tasks at once": "Tâches à la fois",
+  "How many one member holds before the coordinator waits.": "Combien un membre en tient avant que la coordination attende.",
+  "Role": "Rôle",
+  "What they do": "Ce qu’il fait",
+  "Teammate": "Membre",
+  "A client, and the role it plays.": "Un client, et le rôle qu’il tient.",
+  "Your teams, in Settings → Agents": "Vos équipes, dans Réglages → Agents"
 }

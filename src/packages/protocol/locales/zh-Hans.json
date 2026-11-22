@@ -1521,5 +1521,22 @@
   "Cursor's quota reading is off in Settings, so Grok Bot is read without Cursor's sign-in.": "Cursor 的额度读取已在设置中关闭，所以读取 Grok Bot 时不用 Cursor 的登录信息。",
   "Working together": "协作中",
   "Sessions working together through Agent HUD": "通过 Agent HUD 互相协作的会话",
-  "In a team with other sessions": "与其他会话协作中"
+  "In a team with other sessions": "与其他会话协作中",
+  "Teams": "团队",
+  "Who plays which role when an agent splits work across clients.": "一个智能体把活拆给其他客户端时，谁担任什么角色。",
+  "Add a team": "添加团队",
+  "Change": "修改",
+  "No teammates yet.": "还没有成员。",
+  "Any project": "不限项目",
+  "Team name": "团队名称",
+  "A name you will recognise": "一个你认得出的名字",
+  "Project folder": "项目文件夹",
+  "Teammates start here, so they read this project's own instructions.": "成员在这个目录里开会话，从而读到该项目自己的规范。",
+  "Tasks at once": "同时在手的任务",
+  "How many one member holds before the coordinator waits.": "一个成员最多接几项，超过则协调者等待。",
+  "Role": "角色",
+  "What they do": "负责什么",
+  "Teammate": "成员",
+  "A client, and the role it plays.": "一个客户端，和它担任的角色。",
+  "Your teams, in Settings → Agents": "你的团队，在设置 → 智能体"
 }

@@ -12,7 +12,12 @@ import { useGround } from "../ground";
 import { useT } from "@agent-hud/ui/format-context";
 import { useListedSessions } from "./listed-sessions";
 import { noSessionsMatch } from "./session-filters";
-import { TeamMark, TeamsStrip, useTeams } from "./CollaborationTeams";
+import {
+  TeamMark,
+  TeamPresetLine,
+  TeamsStrip,
+  useTeams,
+} from "./CollaborationTeams";
 
 /** One line of text that shortens with an ellipsis where it does not fit. */
 const clipped: CSSProperties = {
@@ -152,12 +157,20 @@ export function SourceSessions({
       </button>
       {/* An agent's own panel lists only its sessions; teams span agents. */}
       {!focusVendor && (
-        <TeamsStrip
-          teams={team.teams}
-          light={light}
-          Logo={Logo}
-          colors={colors}
-        />
+        <>
+          <TeamPresetLine
+            snapshot={snapshot}
+            light={light}
+            Logo={Logo}
+            colors={colors}
+          />
+          <TeamsStrip
+            teams={team.teams}
+            light={light}
+            Logo={Logo}
+            colors={colors}
+          />
+        </>
       )}
       {sessions.slice(0, limit).map((session) => (
         // The whole row opens the session's page, as its heading opens the list.

@@ -62,7 +62,15 @@ impl Messaging {
                 )
             })
             .collect::<serde_json::Map<_, _>>();
-        json!({"sessions":rows,"startFolders":starts,"passLimit":self.preferences.limit,"sendsAs":if self.preferences.as_user {"user"} else {"labelled"}})
+        let mut answer = json!({"sessions":rows,"startFolders":starts,"passLimit":self.preferences.limit,"sendsAs":if self.preferences.as_user {"user"} else {"labelled"}});
+        // The teams the user saved, for the coordinator's first call; with
+        // none saved the key stays out rather than answering an empty list.
+        if !self.preferences.teams.is_empty() {
+            if let Ok(teams) = serde_json::to_value(&self.preferences.teams) {
+                answer["teams"] = teams;
+            }
+        }
+        answer
     }
 
     /// Whether a message sent with `delivery: steer` would go into a turn of
